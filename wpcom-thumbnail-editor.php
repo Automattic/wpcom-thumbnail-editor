@@ -712,6 +712,10 @@ class WPcom_Thumbnail_Editor {
 	 * @return mixed Array of thumbnail details (URL, width, height, is_intermedite) or the previous data.
 	 */
 	public function get_thumbnail_url( $existing_resize, $attachment_id, $size ) {
+		
+		if( !function_exists( 'jetpack_photon_url' ) ||  defined('JETPACK_DEV_DEBUG') )
+			return $existing_resize;
+		
 		// Named sizes only
 		if ( is_array( $size ) )
 			return $existing_resize;
@@ -726,8 +730,7 @@ class WPcom_Thumbnail_Editor {
 
 		list( $selection_x1, $selection_y1, $selection_x2, $selection_y2 ) = $coordinates;
 
-		if( function_exists( 'jetpack_photon_url' ) )
-			$url = jetpack_photon_url(
+		$url = jetpack_photon_url(
 				wp_get_attachment_url( $attachment_id ),
 				array(
 					'crop' => array( 
@@ -742,8 +745,6 @@ class WPcom_Thumbnail_Editor {
 					),
 				)
 			);
-		else
-			$url = wp_get_attachment_url( $attachment_id );
 
 		return array( $url, $thumbnail_size['width'], $thumbnail_size['height'], true );
 	}
