@@ -320,53 +320,64 @@ class WPcom_Thumbnail_Editor {
 
 		<script type="text/javascript">
 			jQuery(document).ready(function($){
-				function update_preview ( img, selection ) {
-					// This is how big the selection image is
-					var img_width  = <?php echo (int) $image[1]; ?>;
-					var img_height = <?php echo (int) $image[2]; ?>;
+				<?php
+				/**
+				 * Other scripts, like Core's div.updated movement, can negatively affect the
+				 * preview position. This code should run after other snippets hooked to
+				 * document.ready, so we're deferring our code using an additional jQuery
+				 * wrapper. This should catch the majority of conflicts.
+				 * @see https://github.com/Automattic/wpcom-thumbnail-editor/issues/5
+				 */
+				?>
+				$( function() {
+					function update_preview ( img, selection ) {
+						// This is how big the selection image is
+						var img_width  = <?php echo (int) $image[1]; ?>;
+						var img_height = <?php echo (int) $image[2]; ?>;
 
-					// This is how big the thumbnail preview needs to be
-					var thumb_width  = <?php echo (int) $thumbnail_dimensions['width']; ?>;
-					var thumb_height = <?php echo (int) $thumbnail_dimensions['height']; ?>;
+						// This is how big the thumbnail preview needs to be
+						var thumb_width  = <?php echo (int) $thumbnail_dimensions['width']; ?>;
+						var thumb_height = <?php echo (int) $thumbnail_dimensions['height']; ?>;
 
-					var scaleX = thumb_width / ( selection.width || 1 );
-					var scaleY = thumb_height / ( selection.height || 1 );
+						var scaleX = thumb_width / ( selection.width || 1 );
+						var scaleY = thumb_height / ( selection.height || 1 );
 
-					// Update the preview image
-					$('#wpcom-thumbnail-edit-preview').css({
-						width: Math.round( scaleX * img_width ) + 'px',
-						height: Math.round( scaleY * img_height ) + 'px',
-						marginLeft: '-' + Math.round( scaleX * selection.x1 ) + 'px',
-						marginTop: '-' + Math.round( scaleY * selection.y1 ) + 'px'
-					});
-				}
-
-				$('#wpcom-thumbnail-edit').imgAreaSelect({
-					aspectRatio: '<?php echo intval( $thumbnail_dimensions['width'] ) . ':' . intval( $thumbnail_dimensions['height'] ) ?>',
-					handles: true,
-
-					// Initial selection
-					x1: <?php echo (int) $initial_selection[0]; ?>,
-					y1: <?php echo (int) $initial_selection[1]; ?>,
-					x2: <?php echo (int) $initial_selection[2]; ?>,
-					y2: <?php echo (int) $initial_selection[3]; ?>,
-
-					// Update the preview
-					onInit: function ( img, selection ) {
-						update_preview( img, selection );
-						$('#wpcom-thumbnail-edit-preview').show();
-					},
-					onSelectChange: function ( img, selection ) {
-						update_preview( img, selection );
-					},
-
-					// Fill the hidden fields with the selected coordinates for the form
-					onSelectEnd: function ( img, selection ) {
-						$('input[name="wpcom_thumbnail_edit_x1"]').val(selection.x1);
-						$('input[name="wpcom_thumbnail_edit_y1"]').val(selection.y1);
-						$('input[name="wpcom_thumbnail_edit_x2"]').val(selection.x2);
-						$('input[name="wpcom_thumbnail_edit_y2"]').val(selection.y2);
+						// Update the preview image
+						$('#wpcom-thumbnail-edit-preview').css({
+							width: Math.round( scaleX * img_width ) + 'px',
+							height: Math.round( scaleY * img_height ) + 'px',
+							marginLeft: '-' + Math.round( scaleX * selection.x1 ) + 'px',
+							marginTop: '-' + Math.round( scaleY * selection.y1 ) + 'px'
+						});
 					}
+
+					$('#wpcom-thumbnail-edit').imgAreaSelect({
+						aspectRatio: '<?php echo intval( $thumbnail_dimensions['width'] ) . ':' . intval( $thumbnail_dimensions['height'] ) ?>',
+						handles: true,
+
+						// Initial selection
+						x1: <?php echo (int) $initial_selection[0]; ?>,
+						y1: <?php echo (int) $initial_selection[1]; ?>,
+						x2: <?php echo (int) $initial_selection[2]; ?>,
+						y2: <?php echo (int) $initial_selection[3]; ?>,
+
+						// Update the preview
+						onInit: function ( img, selection ) {
+							update_preview( img, selection );
+							$('#wpcom-thumbnail-edit-preview').show();
+						},
+						onSelectChange: function ( img, selection ) {
+							update_preview( img, selection );
+						},
+
+						// Fill the hidden fields with the selected coordinates for the form
+						onSelectEnd: function ( img, selection ) {
+							$('input[name="wpcom_thumbnail_edit_x1"]').val(selection.x1);
+							$('input[name="wpcom_thumbnail_edit_y1"]').val(selection.y1);
+							$('input[name="wpcom_thumbnail_edit_x2"]').val(selection.x2);
+							$('input[name="wpcom_thumbnail_edit_y2"]').val(selection.y2);
+						}
+					});
 				});
 			});
 		</script>
@@ -732,12 +743,12 @@ class WPcom_Thumbnail_Editor {
 	 * @return mixed Array of thumbnail details (URL, width, height, is_intermedite) or the previous data.
 	 */
 	public function get_thumbnail_url( $existing_resize, $attachment_id, $size ) {
-		
+
 		//On dev sites, Jetpack is often active but Photon will not work because the content files are not accessible to the public internet.
 		//Right now, a broken image is displayed when this plugin is active and a thumbnail has been edited. This will allow the unmodified image to be displayed.
 		if( !function_exists( 'jetpack_photon_url' ) ||  defined('JETPACK_DEV_DEBUG') )
 			return $existing_resize;
-			
+
 		// Named sizes only
 		if ( is_array( $size ) ) {
 			return $existing_resize;
