@@ -1,0 +1,6 @@
+{
+	"name": "automattic/wpcom-thumbnail-editor",
+	"description": "WordPress.com Thumbnail Editor",
+	"type": "wordpress-plugin",
+	"license": "GPL-2.0+"
+}
