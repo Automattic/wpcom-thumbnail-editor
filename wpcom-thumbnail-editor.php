@@ -1,5 +1,4 @@
 <?php /*
-
 **************************************************************************
 
 Plugin Name:  WordPress.com Thumbnail Editor
@@ -39,10 +38,12 @@ class WPcom_Thumbnail_Editor {
 	 * Initialize the class by registering various hooks.
 	 */
 	function __construct() {
-
-		$args = apply_filters( 'wpcom_thumbnail_editor_args', array(
-			'image_ratio_map' => false,
-		) );
+		$args = apply_filters(
+			'wpcom_thumbnail_editor_args',
+			array(
+				'image_ratio_map' => false,
+			) 
+		);
 
 		// Allow for private blogs to use this plugin
 		$this->allow_private_blogs = apply_filters( 'wpcom_thumbnail_editor_allow_private_blogs', $this->allow_private_blogs );
@@ -66,14 +67,15 @@ class WPcom_Thumbnail_Editor {
 			add_action( 'admin_post_wpcom_thumbnail_edit', array( &$this, 'post_handler' ) );
 
 			// Display status messages
-			if ( ! empty( $_GET['wtereset'] ) || ! empty( $_GET['wteupdated'] ) )
+			if ( ! empty( $_GET['wtereset'] ) || ! empty( $_GET['wteupdated'] ) ) {
 				add_action( 'admin_notices', array( &$this, 'output_thumbnail_message' ) );
+			}
 
 			add_action( 'admin_notices', array( &$this, 'jetpack_photon_url_message' ) );
 		}
 
 		// using a global for now, maybe these values could be set in constructor in future?
-		if( is_array( $args['image_ratio_map'] ) ) {
+		if ( is_array( $args['image_ratio_map'] ) ) {
 			$this->use_ratio_map = true;
 
 			// Validate image sizes
@@ -82,12 +84,14 @@ class WPcom_Thumbnail_Editor {
 				$ratio_map[ $ratio ] = array();
 
 				foreach ( $image_sizes as $image_size ) {
-					if ( array_key_exists( $image_size, $_wp_additional_image_sizes ) )
+					if ( array_key_exists( $image_size, $_wp_additional_image_sizes ) ) {
 						$ratio_map[ $ratio ][] = $image_size;
+					}
 				}
 
-				if ( empty( $ratio_map[ $ratio ] ) )
+				if ( empty( $ratio_map[ $ratio ] ) ) {
 					unset( $ratio_map[ $ratio ] );
+				}
 			}
 			$this->image_ratio_map = $ratio_map;
 		}
@@ -99,12 +103,13 @@ class WPcom_Thumbnail_Editor {
 	 * It cheats a little and uses the settings error API in order to avoid having to generate it's own HTML.
 	 */
 	public function output_thumbnail_message() {
-		if ( ! empty( $_GET['wtereset'] ) )
+		if ( ! empty( $_GET['wtereset'] ) ) {
 			add_settings_error( 'wpcom_thumbnail_edit', 'reset', __( 'Thumbnail position reset.', 'wpcom-thumbnail-editor' ), 'updated' );
-		elseif ( ! empty( $_GET['wteupdated'] ) )
+		} elseif ( ! empty( $_GET['wteupdated'] ) ) {
 			add_settings_error( 'wpcom_thumbnail_edit', 'updated', __( 'Thumbnail position updated.', 'wpcom-thumbnail-editor' ), 'updated' );
-		else
+		} else {
 			return;
+		}
 
 		settings_errors( 'wpcom_thumbnail_edit' );
 	}
@@ -113,8 +118,9 @@ class WPcom_Thumbnail_Editor {
 	 * Display a message if JetPack isn't enabled (specifically, jetpack_photon_url is not defined.)
 	 */
 	function jetpack_photon_url_message() {
-		if( function_exists( 'jetpack_photon_url' ) )
+		if ( function_exists( 'jetpack_photon_url' ) ) {
 			return;
+		}
 
 		echo '<div class="error"><p>' . __( 'Jetpack is not enabled, which will disable some features of the WordPress.com Thumbnail Editor module. Please enable JetPack to make this module fully functional.', 'wpcom-thumbnail-editor' ) . '</p></div>';
 
@@ -129,8 +135,9 @@ class WPcom_Thumbnail_Editor {
 	 * @return array Form fields, either unmodified on error or new field added on success.
 	 */
 	public function add_attachment_fields_to_edit( $form_fields, $attachment ) {
-		if ( ! wp_attachment_is_image( $attachment->ID ) )
+		if ( ! wp_attachment_is_image( $attachment->ID ) ) {
 			return $form_fields;
+		}
 
 		$form_fields['wpcom_thumbnails'] = array(
 			'label' => 'Thumbnail Images',
@@ -148,13 +155,13 @@ class WPcom_Thumbnail_Editor {
 	 * @return string The HTML for the form field.
 	 */
 	public function get_attachment_field_html( $attachment ) {
-
 		$sizes = $this->use_ratio_map ? $this->get_image_sizes_by_ratio() : $this->get_intermediate_image_sizes();
 
 		$sizes = apply_filters( 'wpcom_thumbnail_editor_image_size_names_choose', $sizes );
 
-		if ( empty( $sizes ) )
+		if ( empty( $sizes ) ) {
 			return '<p>' . __( 'No thumbnail sizes could be found that are cropped. For now this functionality only supports cropped thumbnails.', 'wpcom-thumbnail-editor' ) . '</p>';
+		}
 
 		// Photon has to be able to access the source images
 		if ( function_exists( 'is_private_blog' ) && is_private_blog() && true !== $this->allow_private_blogs ) {
@@ -174,46 +181,46 @@ class WPcom_Thumbnail_Editor {
 			$html .= '<div>';
 
 			// key wont really matter if its not using a dimension map
-			foreach ( $sizes as $key => $size ) {
+		foreach ( $sizes as $key => $size ) {
+			$image_name = $this->use_ratio_map ? $key : $size;
+			$image_name = apply_filters( 'wpcom_thumbnail_editor_image_name', $image_name, $key, $size, $this->use_ratio_map );
 
-				$image_name = $this->use_ratio_map ? $key : $size;
-				$image_name = apply_filters( 'wpcom_thumbnail_editor_image_name', $image_name, $key, $size, $this->use_ratio_map );
+			$edit_url = admin_url( 'admin.php?action=wpcom_thumbnail_edit&id=' . intval( $attachment->ID ) . '&size=' . urlencode( $size ) );
 
-				$edit_url = admin_url( 'admin.php?action=wpcom_thumbnail_edit&id=' . intval( $attachment->ID ) . '&size=' . urlencode( $size ) );
-
-				// add an extra query var if were using a ratio map
-				if( $this->use_ratio_map ) {
-					$edit_url = add_query_arg( 'ratio', $key, $edit_url );
-				}
-
-				// We need to get the fullsize thumbnail so that the cropping is properly done
-				$thumbnail = image_downsize( $attachment->ID, $size );
-
-				// Resize the thumbnail to fit into a small box so it's displayed at a reasonable size
-				if( function_exists( 'jetpack_photon_url' ) ) {
-					$thumbnail_url = jetpack_photon_url(
-						$thumbnail[0],
-						apply_filters( 'wpcom_thumbnail_editor_preview_args', array( 'fit' => array( 250, 250 ) ), $attachment->ID, $size )
-					);
-				} else {
-					$thumbnail_url = $thumbnail[0];
-				}
-
-				$html .= '<div style="float:left;margin:0 20px 20px 0;min-width:250px;">';
-					$html .= '<a href="' . esc_url( $edit_url ) . '"';
-
-					if ( 'media.php' != basename( $_SERVER['PHP_SELF'] ) )
-						$html .= ' target="_blank"';
-
-					$html .= '>';
-						$html .= '<strong>' . esc_html( $image_name ) . '</strong><br />';
-						$html .= '<img src="' . esc_url( $thumbnail_url ) . '" alt="' . esc_attr( $size ) . '" />';
-					$html .= '</a>';
-				$html .= '</div>';
+			// add an extra query var if were using a ratio map
+			if ( $this->use_ratio_map ) {
+				$edit_url = add_query_arg( 'ratio', $key, $edit_url );
 			}
 
+			// We need to get the fullsize thumbnail so that the cropping is properly done
+			$thumbnail = image_downsize( $attachment->ID, $size );
+
+			// Resize the thumbnail to fit into a small box so it's displayed at a reasonable size
+			if ( function_exists( 'jetpack_photon_url' ) ) {
+				$thumbnail_url = jetpack_photon_url(
+					$thumbnail[0],
+					apply_filters( 'wpcom_thumbnail_editor_preview_args', array( 'fit' => array( 250, 250 ) ), $attachment->ID, $size )
+				);
+			} else {
+				$thumbnail_url = $thumbnail[0];
+			}
+
+			$html     .= '<div style="float:left;margin:0 20px 20px 0;min-width:250px;">';
+				$html .= '<a href="' . esc_url( $edit_url ) . '"';
+
+			if ( 'media.php' != basename( $_SERVER['PHP_SELF'] ) ) {
+				$html .= ' target="_blank"';
+			}
+
+				$html     .= '>';
+					$html .= '<strong>' . esc_html( $image_name ) . '</strong><br />';
+					$html .= '<img src="' . esc_url( $thumbnail_url ) . '" alt="' . esc_attr( $size ) . '" />';
+				$html     .= '</a>';
+			$html         .= '</div>';
+		}
+
 			$html .= '</div>';
-		$html .= '</div>';
+		$html     .= '</div>';
 
 		return $html;
 	}
@@ -230,15 +237,17 @@ class WPcom_Thumbnail_Editor {
 		$size = $_REQUEST['size']; // Validated in this::validate_parameters()
 
 		// Make sure the image fits on the screen
-		if ( ! $image = image_downsize( $attachment->ID, array( 1024, 1024 ) ) )
+		if ( ! $image = image_downsize( $attachment->ID, array( 1024, 1024 ) ) ) {
 			wp_die( __( 'Failed to downsize the original image to fit on your screen. How odd. Please contact support.', 'wpcom-thumbnail-editor' ) );
+		}
 
 		// How big is the final thumbnail image?
-		if ( ! $thumbnail_dimensions = $this->get_thumbnail_dimensions( $size ) )
+		if ( ! $thumbnail_dimensions = $this->get_thumbnail_dimensions( $size ) ) {
 			wp_die( sprintf( __( 'Invalid %s parameter.', 'wpcom-thumbnail-editor' ), '<code>size</code>' ) );
+		}
 
 
-		$parent_file = 'upload.php';
+		$parent_file  = 'upload.php';
 		$submenu_file = 'upload.php';
 
 		// adjust the image name if were using a ratio map
@@ -249,14 +258,14 @@ class WPcom_Thumbnail_Editor {
 		wp_enqueue_script( 'imgareaselect' );
 		wp_enqueue_style( 'imgareaselect' );
 
-		require( ABSPATH . '/wp-admin/admin-header.php' );
+		require ABSPATH . '/wp-admin/admin-header.php';
 
 
 		$original_aspect_ratio  = $image[1] / $image[2];
 		$thumbnail_aspect_ratio = $thumbnail_dimensions['width'] / $thumbnail_dimensions['height'];
 
 
-		# Build the selection coordinates
+		// Build the selection coordinates
 
 		// If there's already a custom selection
 		if ( $coordinates = $this->get_coordinates( $attachment->ID, $size ) ) {
@@ -307,7 +316,7 @@ class WPcom_Thumbnail_Editor {
 			);
 		}
 
-?>
+		?>
 
 <div class="wrap">
 	<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
@@ -343,7 +352,7 @@ class WPcom_Thumbnail_Editor {
 				}
 
 				$('#wpcom-thumbnail-edit').imgAreaSelect({
-					aspectRatio: '<?php echo intval( $thumbnail_dimensions['width'] ) . ':' . intval( $thumbnail_dimensions['height'] ) ?>',
+					aspectRatio: '<?php echo intval( $thumbnail_dimensions['width'] ) . ':' . intval( $thumbnail_dimensions['height'] ); ?>',
 					handles: true,
 
 					// Initial selection
@@ -377,7 +386,7 @@ class WPcom_Thumbnail_Editor {
 
 		<p><img src="<?php echo esc_url( $image[0] ); ?>" width="<?php echo (int) $image[1]; ?>" height="<?php echo (int) $image[2]; ?>" id="wpcom-thumbnail-edit" alt="<?php esc_attr( sprintf( __( '"%s" Thumbnail', 'wpcom-thumbnail-editor' ), $size ) ); ?>" /></p>
 
-		<?php do_action( 'wpcom_thumbnail_editor_edit_thumbnail_screen', $attachment->ID, $size ) ?>
+		<?php do_action( 'wpcom_thumbnail_editor_edit_thumbnail_screen', $attachment->ID, $size ); ?>
 
 		<p>
 			<?php submit_button( null, 'primary', 'submit', false ); ?>
@@ -411,9 +420,9 @@ class WPcom_Thumbnail_Editor {
 	</form>
 </div>
 
-<?php
+		<?php
 
-		require( ABSPATH . '/wp-admin/admin-footer.php' );
+		require ABSPATH . '/wp-admin/admin-footer.php';
 	}
 
 	/**
@@ -446,11 +455,11 @@ class WPcom_Thumbnail_Editor {
 		);
 
 		foreach ( $required_fields as $required_field => $variable_name ) {
-			if ( empty ( $_POST[$required_field] ) && 0 != $_POST[$required_field] ) {
+			if ( empty( $_POST[ $required_field ] ) && 0 != $_POST[ $required_field ] ) {
 				wp_die( sprintf( __( 'Invalid %s parameter.', 'wpcom-thumbnail-editor' ), '<code>' . $required_field . '</code>' ) );
 			}
 
-			$$variable_name = (int) $_POST[$required_field];
+			$$variable_name = (int) $_POST[ $required_field ];
 		}
 
 		$attachment_metadata = wp_get_attachment_metadata( $attachment->ID );
@@ -489,22 +498,27 @@ class WPcom_Thumbnail_Editor {
 	 * @return null|object Dies on error, returns attachment object on success.
 	 */
 	public function validate_parameters() {
-		if ( empty( $_REQUEST['id'] ) || ! $attachment = get_post( intval( $_REQUEST['id'] ) ) )
+		if ( empty( $_REQUEST['id'] ) || ! $attachment = get_post( intval( $_REQUEST['id'] ) ) ) {
 			wp_die( sprintf( __( 'Invalid %s parameter.', 'wpcom-thumbnail-editor' ), '<code>id</code>' ) );
+		}
 
-		if ( 'attachment' != $attachment->post_type  || ! wp_attachment_is_image( $attachment->ID ) )
+		if ( 'attachment' != $attachment->post_type || ! wp_attachment_is_image( $attachment->ID ) ) {
 			wp_die( sprintf( __( 'That is not a valid image attachment.', 'wpcom-thumbnail-editor' ), '<code>id</code>' ) );
+		}
 
-		if ( ! current_user_can( get_post_type_object( $attachment->post_type )->cap->edit_post, $attachment->ID ) )
+		if ( ! current_user_can( get_post_type_object( $attachment->post_type )->cap->edit_post, $attachment->ID ) ) {
 			wp_die( __( 'You are not allowed to edit this attachment.' ) );
+		}
 
 
 		if ( $this->use_ratio_map ) {
-			if ( empty( $_REQUEST['size'] ) || ! in_array( $_REQUEST['size'], $this->get_image_sizes_by_ratio() ) )
+			if ( empty( $_REQUEST['size'] ) || ! in_array( $_REQUEST['size'], $this->get_image_sizes_by_ratio() ) ) {
 				wp_die( sprintf( __( 'Invalid %s parameter.', 'wpcom-thumbnail-editor' ), '<code>size</code>' ) );
+			}
 		} else {
-			if ( empty( $_REQUEST['size'] ) || ! in_array( $_REQUEST['size'], $this->get_intermediate_image_sizes() ) )
+			if ( empty( $_REQUEST['size'] ) || ! in_array( $_REQUEST['size'], $this->get_intermediate_image_sizes() ) ) {
 				wp_die( sprintf( __( 'Invalid %s parameter.', 'wpcom-thumbnail-editor' ), '<code>size</code>' ) );
+			}
 		}
 
 		return $attachment;
@@ -520,7 +534,7 @@ class WPcom_Thumbnail_Editor {
 	public function get_intermediate_image_sizes( $cropped_only = true ) {
 		global $_wp_additional_image_sizes;
 
-		# /wp-content/mu-plugins/wpcom-media.php
+		// /wp-content/mu-plugins/wpcom-media.php
 		$had_filter = remove_filter( 'intermediate_image_sizes', 'wpcom_intermediate_sizes' );
 
 		$sizes = get_intermediate_image_sizes();
@@ -535,8 +549,9 @@ class WPcom_Thumbnail_Editor {
 			foreach ( $sizes as $size ) {
 				switch ( $size ) {
 					case 'thumbnail':
-						if ( get_option( 'thumbnail_crop' ) )
+						if ( get_option( 'thumbnail_crop' ) ) {
 							$filtered_sizes[] = $size;
+						}
 						break;
 
 					case 'medium':
@@ -544,8 +559,9 @@ class WPcom_Thumbnail_Editor {
 						break;
 
 					default:
-						if ( ! empty( $_wp_additional_image_sizes[$size] ) && $_wp_additional_image_sizes[$size]['crop'] )
+						if ( ! empty( $_wp_additional_image_sizes[ $size ] ) && $_wp_additional_image_sizes[ $size ]['crop'] ) {
 							$filtered_sizes[] = $size;
+						}
 				}
 			}
 
@@ -562,12 +578,12 @@ class WPcom_Thumbnail_Editor {
 	 * @return array Array of image size strings.
 	 */
 	public function get_image_sizes_by_ratio() {
-
 		$ratios = array_keys( $this->image_ratio_map );
 
-		foreach( $ratios as $ratio ) {
-			if( isset( $this->image_ratio_map[$ratio][0] ) )
-				$sizes[$ratio] = $this->image_ratio_map[$ratio][0];
+		foreach ( $ratios as $ratio ) {
+			if ( isset( $this->image_ratio_map[ $ratio ][0] ) ) {
+				$sizes[ $ratio ] = $this->image_ratio_map[ $ratio ][0];
+			}
 		}
 
 		return $sizes;
@@ -591,18 +607,22 @@ class WPcom_Thumbnail_Editor {
 				break;
 
 			default:
-				if ( empty( $_wp_additional_image_sizes[$size] ) )
+				if ( empty( $_wp_additional_image_sizes[ $size ] ) ) {
 					return false;
+				}
 
-				$width  = $_wp_additional_image_sizes[$size]['width'];
-				$height = $_wp_additional_image_sizes[$size]['height'];
+				$width  = $_wp_additional_image_sizes[ $size ]['width'];
+				$height = $_wp_additional_image_sizes[ $size ]['height'];
 		}
 
 		// Just to be safe
 		$width  = (int) $width;
 		$height = (int) $height;
 
-		return array( 'width' => $width, 'height' => $height );
+		return array(
+			'width'  => $width,
+			'height' => $height,
+		);
 	}
 
 	/**
@@ -622,16 +642,16 @@ class WPcom_Thumbnail_Editor {
 			// from other sizes in the same group, as they are always the same. Happens if a size is added to a group later and hasn't
 			// been backfilled in all post meta. Not sure why coords are saved for every size, rather than group, but hey.
 			if ( $this->use_ratio_map ) {
-				foreach( $this->image_ratio_map as $ratio => $ratio_sizes ) {
-					foreach( $ratio_sizes as $ratio_size ) {
+				foreach ( $this->image_ratio_map as $ratio => $ratio_sizes ) {
+					foreach ( $ratio_sizes as $ratio_size ) {
 						if ( $size === $ratio_size ) {
 							// Determine if there are any saved coordinates that match the desired $size in the matched ratio group
 							$intersect = array_intersect_key( $ratio_sizes, $sizes );
 
 							if ( is_array( $intersect ) && ! empty( $intersect ) ) {
-								foreach( $intersect as $matching_size ) {
+								foreach ( $intersect as $matching_size ) {
 									if ( isset( $sizes[ $matching_size ] ) ) {
-										$coordinates 	= $sizes[ $matching_size ];
+										$coordinates = $sizes[ $matching_size ];
 
 										break;
 									}
@@ -658,17 +678,16 @@ class WPcom_Thumbnail_Editor {
 	public function save_coordinates( $attachment_id, $size, $coordinates ) {
 		$sizes = (array) get_post_meta( $attachment_id, $this->post_meta, true );
 
-		$sizes[$size] = $coordinates;
+		$sizes[ $size ] = $coordinates;
 
 		// save meta for all the related sizes to if were using a ratio map
-		if( $this->use_ratio_map ) {
-
+		if ( $this->use_ratio_map ) {
 			$related_sizes = $this->get_related_sizes( $size );
 
 			// add the same meta value to the related sizes
-			if( count( $related_sizes ) ) {
-				foreach( $related_sizes as $related_size ){
-					$sizes[$related_size] = $coordinates;
+			if ( count( $related_sizes ) ) {
+				foreach ( $related_sizes as $related_size ) {
+					$sizes[ $related_size ] = $coordinates;
 				}
 			}
 		}
@@ -682,14 +701,13 @@ class WPcom_Thumbnail_Editor {
 	 * @return array Array of related image size strings
 	 */
 	public function get_related_sizes( $size ) {
-
 		$related_sizes = array();
 
 		// find out which ratio map the size belongs to
-		foreach( $this->image_ratio_map as $ratio => $ratio_sizes ) {
-			foreach( $ratio_sizes as $ratio_size ) {
-				if( $ratio_size == $size ){
-					$related_sizes = $this->image_ratio_map[$ratio];
+		foreach ( $this->image_ratio_map as $ratio => $ratio_sizes ) {
+			foreach ( $ratio_sizes as $ratio_size ) {
+				if ( $ratio_size == $size ) {
+					$related_sizes = $this->image_ratio_map[ $ratio ];
 					break 2;
 				}
 			}
@@ -706,20 +724,22 @@ class WPcom_Thumbnail_Editor {
 	 * @return bool False on failure (probably no such custom crop), true on success.
 	 */
 	public function delete_coordinates( $attachment_id, $size ) {
-		if ( ! $sizes = get_post_meta( $attachment_id, $this->post_meta, true ) )
+		if ( ! $sizes = get_post_meta( $attachment_id, $this->post_meta, true ) ) {
 			return false;
+		}
 
-		if ( empty( $sizes[$size] ) )
+		if ( empty( $sizes[ $size ] ) ) {
 			return false;
+		}
 
-		unset( $sizes[$size] );
+		unset( $sizes[ $size ] );
 
 		// also unset related sizes
-		if( $this->use_ratio_map ) {
+		if ( $this->use_ratio_map ) {
 			$related_sizes = $this->get_related_sizes( $size );
-			if( count( $related_sizes ) ) {
-				foreach( $related_sizes as $related_size ){
-					unset( $sizes[$related_size] );
+			if ( count( $related_sizes ) ) {
+				foreach ( $related_sizes as $related_size ) {
+					unset( $sizes[ $related_size ] );
 				}
 			}
 		}
@@ -763,18 +783,24 @@ class WPcom_Thumbnail_Editor {
 		if ( function_exists( 'jetpack_photon_url' ) ) {
 			$url = jetpack_photon_url(
 				wp_get_attachment_url( $attachment_id ),
-				apply_filters( 'wpcom_thumbnail_editor_thumbnail_args', array(
-					'crop' => array(
-						$selection_x1 . 'px',
-						$selection_y1 . 'px',
-						( $selection_x2 - $selection_x1 ) . 'px',
-						( $selection_y2 - $selection_y1 ) . 'px',
+				apply_filters(
+					'wpcom_thumbnail_editor_thumbnail_args',
+					array(
+						'crop'   => array(
+							$selection_x1 . 'px',
+							$selection_y1 . 'px',
+							( $selection_x2 - $selection_x1 ) . 'px',
+							( $selection_y2 - $selection_y1 ) . 'px',
+						),
+						'resize' => array(
+							$thumbnail_size['width'],
+							$thumbnail_size['height'],
+						),
 					),
-					'resize' => array(
-						$thumbnail_size['width'],
-						$thumbnail_size['height'],
-					),
-				), $attachment_id, $size, $thumbnail_size )
+					$attachment_id,
+					$size,
+					$thumbnail_size 
+				)
 			);
 		} else {
 			$url = wp_get_attachment_url( $attachment_id );
@@ -785,6 +811,9 @@ class WPcom_Thumbnail_Editor {
 }
 
 // initializing the class on init so we can filter the args
-add_action( 'init', function() {
-	$GLOBALS['WPcom_Thumbnail_Editor'] = new WPcom_Thumbnail_Editor;
-} );
+add_action(
+	'init',
+	function() {
+		$GLOBALS['WPcom_Thumbnail_Editor'] = new WPcom_Thumbnail_Editor();
+	} 
+);
