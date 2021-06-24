@@ -706,8 +706,8 @@ class WPcom_Thumbnail_Editor {
 	 * Saves the coordinates for a custom crop for a given attachment ID and thumbnail size.
 	 *
 	 * @param int    $attachment_id Attachment ID.
-	 * @param string $size Thumbnail size name.
-	 * @param array  $coordinates Array of coordinates in the format array( x1, y1, x2, y2 ).
+	 * @param string $size          Thumbnail size name.
+	 * @param array  $coordinates   Array of coordinates in the format `array( x1, y1, x2, y2 )`.
 	 */
 	public function save_coordinates( $attachment_id, $size, $coordinates ) {
 		$sizes = (array) get_post_meta( $attachment_id, $this->post_meta, true );
