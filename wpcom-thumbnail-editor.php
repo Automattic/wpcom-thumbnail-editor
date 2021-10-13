@@ -60,6 +60,9 @@ class WPcom_Thumbnail_Editor {
 		if ( ! function_exists( 'is_private_blog' ) || ( function_exists( 'is_private_blog' )
 			&& ( ! is_private_blog() || true === $this->allow_private_blogs ) ) ) {
 			add_filter( 'image_downsize', array( &$this, 'get_thumbnail_url' ), 15, 3 );
+
+			// Run late to avoid overwriting modifications made at default priority.
+			add_filter( 'wp_calculate_image_srcset', [ $this, 'maintain_thumbnail_crop_in_srcset' ], 20, 3 );
 		}
 
 		// Admin-only hooks.
@@ -792,10 +795,7 @@ class WPcom_Thumbnail_Editor {
 	 * @return mixed Array of thumbnail details (URL, width, height, is_intermedite) or the previous data.
 	 */
 	public function get_thumbnail_url( $existing_resize, $attachment_id, $size ) {
-
-		// On dev sites, Jetpack is often active but Photon will not work because the content files are not accessible to the public internet.
-		// Right now, a broken image is displayed when this plugin is active and a thumbnail has been edited. This will allow the unmodified image to be displayed.
-		if ( ! function_exists( 'jetpack_photon_url' ) || ( true === defined( 'JETPACK_DEV_DEBUG' ) && true === constant( 'JETPACK_DEV_DEBUG' ) ) ) {
+		if ( ! $this->photon_is_available() ) {
 			return $existing_resize;
 		}
 
@@ -844,6 +844,141 @@ class WPcom_Thumbnail_Editor {
 		}
 
 		return array( $url, $thumbnail_size['width'], $thumbnail_size['height'], true );
+	}
+
+	/**
+	 * Maintain in `srcset` URLs any custom crops set by the WPCom Thumbnail
+	 * Editor.
+	 *
+	 * @param array  $sources `srcset` source data.
+	 * @param array  $size    Maximum dimensions requested for `srcset` images.
+	 * @param string $src     `src` of original image.
+	 * @return array
+	 */
+	public function maintain_thumbnail_crop_in_srcset(
+		$sources,
+		$size,
+		$src
+	) {
+		if ( empty( $sources ) ) {
+			return $sources;
+		}
+
+		if ( ! $this->photon_is_available() ) {
+			return $sources;
+		}
+
+		$full_size_params_string = wp_parse_url( $src, PHP_URL_QUERY );
+
+		if ( ! is_string( $full_size_params_string ) ) {
+			return $sources;
+		}
+
+		$full_size_params = [];
+		wp_parse_str( $full_size_params_string, $full_size_params );
+		unset( $full_size_params_string );
+
+		if ( ! isset( $full_size_params['crop'] ) ) {
+			return $sources;
+		}
+
+		$full_size_src = explode( '?', $src, -1 )[0];
+
+		foreach ( $sources as $key => $source ) {
+			/**
+			 * We cannot mix `x` and `w` descriptors, so if another callback
+			 * adds the `x` descriptor (used to indicate pixel density), we must
+			 * bail.
+			 */
+			if ( 'x' === $source['descriptor'] ) {
+				return $sources;
+			}
+
+			$source_params_string = wp_parse_url(
+				$source['url'],
+				PHP_URL_QUERY
+			);
+
+			if ( ! is_string( $source_params_string ) ) {
+				$source_params_string = '';
+			}
+
+			$source_params = [];
+			wp_parse_str( $source_params_string, $source_params );
+			unset( $source_params_string );
+
+			if ( isset( $source_params['crop'] ) ) {
+				continue;
+			}
+
+			$merged_params = array_replace(
+				$full_size_params,
+				$source_params
+			);
+			unset( $source_params );
+
+			/**
+			 * Cannot apply both `fit` and `resize` transforms, and `fit` will
+			 * change the crop, so drop it if both are present.
+			 */
+			if ( isset( $merged_params['fit'], $merged_params['resize'] ) ) {
+				unset( $merged_params['fit'] );
+			}
+
+			/**
+			 * Ensure resized image matches expected width. Photon supports
+			 * chaining both `resize` and `w`, and applies each transform in the
+			 * order that it is passed in the arguments array. `fit`, however,
+			 * is incompatible with `w`.
+			 */
+			if ( isset( $merged_params['fit'] ) ) {
+				unset( $merged_params['w'] );
+			} elseif (
+				isset( $merged_params['resize'] )
+				&& 0 !== strpos(
+					$merged_params['resize'],
+					$source['value'] . ','
+				)
+			) {
+				// `w` is ignored if it appears before `resize`.
+				unset( $merged_params['w'] );
+
+				$merged_params['w'] = $source['value'];
+			}
+
+			$source['url']   = jetpack_photon_url(
+				$full_size_src,
+				$merged_params
+			);
+			$sources[ $key ] = $source;
+		}
+
+		return $sources;
+	}
+
+	/**
+	 * Determine if Photon is available and able to resize images.
+	 *
+	 * On dev sites, Jetpack is often active but Photon will not work because
+	 * the content files are not accessible to the public internet.
+	 *
+	 * Right now, a broken image is displayed when this plugin is active and a
+	 * thumbnail has been edited. This will allow the unmodified image to be
+	 * displayed.
+	 *
+	 * @return bool
+	 */
+	protected function photon_is_available() {
+		$available = ! function_exists( 'jetpack_photon_url' )
+			|| (
+				true === defined( 'JETPACK_DEV_DEBUG' )
+				&& true === constant( 'JETPACK_DEV_DEBUG' )
+			);
+
+		return apply_filters(
+			'wpcom_thumbnail_editor_photon_is_available',
+			$available
+		);
 	}
 }
 
