@@ -99,7 +99,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'descriptor' => 'x',
-						],
+						]
 					),
 				],
 				[
@@ -108,7 +108,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 							$base_sources,
 							[
 								'descriptor' => 'x',
-							],
+							]
 						),
 					],
 					$base_url . $crop_string,
@@ -120,7 +120,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'url' => $base_url . $crop_string,
-						],
+						]
 					),
 				],
 				[
@@ -129,7 +129,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 							$base_sources,
 							[
 								'url' => $base_url . $crop_string,
-							],
+							]
 						),
 					],
 					$base_url . $crop_string,
@@ -141,7 +141,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'url' => $base_url . $crop_string . $base_resize_string,
-						],
+						]
 					),
 				],
 				[
@@ -157,7 +157,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'url' => $base_url . $crop_string . $larger_resize_string . $width_string,
-						],
+						]
 					),
 				],
 				[
@@ -173,7 +173,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'url' => $base_url . $crop_string . $base_resize_string,
-						],
+						]
 					),
 				],
 				[
@@ -194,7 +194,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'url' => $base_url . $crop_string . $base_resize_string . '&quality=75',
-						],
+						]
 					),
 				],
 				[
@@ -215,7 +215,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 						$base_sources,
 						[
 							'url' => $base_url . $crop_string . '&fit=50%2C50',
-						],
+						]
 					),
 				],
 				[
