@@ -1,7 +1,7 @@
 <?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName
 /**
  * Plugin Name:  WordPress.com Thumbnail Editor
- * Version:      1.0.0
+ * Version:      1.0.1
  * Description:  Since thumbnails are generated on-demand on WordPress.com, thumbnail cropping location must be set via the URL. This plugin assists in doing this. Based on concepts by Imran Nathani of <a href="http://metronews.ca/">Metro News Canada</a>.
  * Author:       Automattic
  * Author URI:   https://wpvip.com/
