@@ -72,8 +72,16 @@ jobs:
       - name: Start MySQL Service
         run: sudo systemctl start mysql.service
 
+      - name: Set WordPress installation directory
+        run: echo "WP_CORE_DIR=/tmp/wordpress" >> $GITHUB_ENV
+
       - name: Prepare environment for integration tests
         run: composer prepare-ci
+
+      - name: Install Jetpack
+        run: |
+          curl -o /tmp/jetpack.zip https://downloads.wordpress.org/plugin/jetpack.zip
+          unzip /tmp/jetpack.zip -d ${WP_CORE_DIR}/wp-content/plugins
 
       - name: Run integration tests (single site)
         if: ${{ matrix.php != 8.0 }}

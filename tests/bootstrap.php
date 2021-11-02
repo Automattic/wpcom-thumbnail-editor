@@ -12,10 +12,16 @@ if ( ! file_exists( $_tests_dir . '/includes/functions.php' ) ) {
 require_once $_tests_dir . '/includes/functions.php';
 
 function _manually_load_plugin() {
+	update_option(
+		'active_plugins',
+		array(
+			'jetpack/jetpack.php',
+		)
+	);
+
 	require dirname( __FILE__ ) . '/../wpcom-thumbnail-editor.php';
 }
 tests_add_filter( 'muplugins_loaded', '_manually_load_plugin' );
 
-require $_tests_dir . '/includes/bootstrap.php';
 
-require dirname( __FILE__ ) . '/wpcom-thumbnail-editor-testcase.php';
+require $_tests_dir . '/includes/bootstrap.php';

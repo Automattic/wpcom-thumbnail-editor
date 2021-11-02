@@ -7,8 +7,8 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 	public function setUp() {
 		parent::setUp();
 
-		global $wpcom_thumbnail_editor;
-		$this->_toc = $wpcom_thumbnail_editor;
+		global $WPcom_Thumbnail_Editor;
+		$this->_toc = $WPcom_Thumbnail_Editor;
 	}
 
 	/**
@@ -20,6 +20,7 @@ class WPCOMThumbnailEditor_TestCase extends WP_UnitTestCase {
 	) {
 		// Prevent Photon from bailing due to environment.
 		add_filter( 'jetpack_photon_development_mode', '__return_false', 999 );
+		add_filter( 'wpcom_thumbnail_editor_photon_is_available', '__return_true' );
 
 		/**
 		 * Mirror VIP Go functionality to simplify testing, otherwise
