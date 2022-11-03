@@ -1,8 +1,8 @@
 <?php // phpcs:ignore WordPress.Files.FileName.InvalidClassFileName
 /**
- * Plugin Name:  WordPress.com Thumbnail Editor
- * Version:      1.0.1
- * Description:  Since thumbnails are generated on-demand on WordPress.com, thumbnail cropping location must be set via the URL. This plugin assists in doing this. Based on concepts by Imran Nathani of <a href="http://metronews.ca/">Metro News Canada</a>.
+ * Plugin Name:  WordPress VIP Thumbnail Editor
+ * Version:      1.0.2-wpvip-beta
+ * Description:  Since thumbnails are generated on-demand on <a href="https://docs.wpvip.com/technical-references/vip-go-files-system/image-transformation/">WordPress VIP</a>, thumbnail cropping location must be set via the URL. This plugin assists in doing this. Based on concepts by Imran Nathani of <a href="http://metronews.ca/">Metro News Canada</a>.
  * Author:       Automattic
  * Author URI:   https://wpvip.com/
  *
@@ -219,7 +219,7 @@ class WPcom_Thumbnail_Editor {
 				$thumbnail_url = $thumbnail[0];
 			}
 
-			$html     .= '<div style="float:left;margin:0 20px 20px 0;min-width:250px;">';
+			$html     .= '<div style="float:left;margin:0 20px 20px 0;">';
 				$html .= '<a href="' . esc_url( $edit_url ) . '"';
 
 
@@ -228,7 +228,7 @@ class WPcom_Thumbnail_Editor {
 			}
 
 				$html     .= '>';
-					$html .= '<strong>' . esc_html( $image_name ) . '</strong><br />';
+					$html .= '<strong>' . esc_html( $this->get_size_label( $image_name ) ) . '</strong><br />';
 					$html .= '<img src="' . esc_url( $thumbnail_url ) . '" alt="' . esc_attr( $size ) . '" />';
 				$html     .= '</a>';
 			$html         .= '</div>';
@@ -240,6 +240,24 @@ class WPcom_Thumbnail_Editor {
 		return $html;
 	}
 
+	function get_size_label( $size_name ) {
+
+		$size_names = apply_filters(
+					'image_size_names_choose',
+					array(
+						'thumbnail' => __( 'Thumbnail' ),
+						'medium'    => __( 'Medium' ),
+						'large'     => __( 'Large' ),
+						'full'      => __( 'Full Size' ),
+					)
+				);
+
+		if( isset(  $size_names[ $size_name ] ) ) {
+			return $size_names[ $size_name ];
+		} else {
+			return $size_name;
+		}
+	}
 	/**
 	 * Outputs the HTML for the thumbnail crop selection screen.
 	 */
@@ -273,7 +291,7 @@ class WPcom_Thumbnail_Editor {
 		$image_name = isset( $_REQUEST['ratio'] ) ? sanitize_text_field( $_REQUEST['ratio'] ) : $size;
 
 		/* translators: 1: image name */
-		$title = sprintf( esc_html__( 'Edit Thumbnail: %s', 'wpcom-thumbnail-editor' ), $image_name ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		$title = sprintf( esc_html__( 'Edit Thumbnail: %s', 'wpcom-thumbnail-editor' ), $this->get_size_label( $image_name ) ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
 
 		wp_enqueue_script( 'imgareaselect' );
 		wp_enqueue_style( 'imgareaselect' );
@@ -795,9 +813,6 @@ class WPcom_Thumbnail_Editor {
 	 * @return mixed Array of thumbnail details (URL, width, height, is_intermedite) or the previous data.
 	 */
 	public function get_thumbnail_url( $existing_resize, $attachment_id, $size ) {
-		if ( ! $this->photon_is_available() ) {
-			return $existing_resize;
-		}
 
 		// Named sizes only.
 		if ( is_array( $size ) ) {
@@ -817,31 +832,22 @@ class WPcom_Thumbnail_Editor {
 
 		list( $selection_x1, $selection_y1, $selection_x2, $selection_y2 ) = $coordinates;
 
-		if ( function_exists( 'jetpack_photon_url' ) ) {
-			$url = jetpack_photon_url(
-				wp_get_attachment_url( $attachment_id ),
-				apply_filters(
-					'wpcom_thumbnail_editor_thumbnail_args',
-					array(
-						'crop'   => array(
-							$selection_x1 . 'px',
-							$selection_y1 . 'px',
-							( $selection_x2 - $selection_x1 ) . 'px',
-							( $selection_y2 - $selection_y1 ) . 'px',
-						),
-						'resize' => array(
-							$thumbnail_size['width'],
-							$thumbnail_size['height'],
-						),
-					),
-					$attachment_id,
-					$size,
-					$thumbnail_size
-				)
-			);
-		} else {
-			$url = wp_get_attachment_url( $attachment_id );
-		}
+		$url = wp_get_attachment_url( $attachment_id );
+
+		$params = array(
+				'crop'   =>
+							  $selection_x1 . 'px,'
+							. $selection_y1 . 'px,'
+							. ( $selection_x2 - $selection_x1 ) . 'px,'
+							. ( $selection_y2 - $selection_y1 ) . 'px',
+
+				'resize' =>  $thumbnail_size['width'] . ',' . $thumbnail_size['height']
+		);
+
+		$url = $url . '?' . http_build_query( $params );
+
+		// Ensure all URLs are HTTPS
+		$url = str_replace( 'http://', 'https://', $url );
 
 		return array( $url, $thumbnail_size['width'], $thumbnail_size['height'], true );
 	}
@@ -860,11 +866,8 @@ class WPcom_Thumbnail_Editor {
 		$size,
 		$src
 	) {
-		if ( empty( $sources ) ) {
-			return $sources;
-		}
 
-		if ( ! $this->photon_is_available() ) {
+		if ( empty( $sources ) ) {
 			return $sources;
 		}
 
