@@ -7,4 +7,4 @@ This plugin adds a "Show Thumbnails" button on the attachment Edit screen (wp-ad
 
 ### WordPress VIP
 
-There is a [beta release](https://github.com/Automattic/wpcom-thumbnail-editor/releases/tag/1.0.2-wpvip-beta) validated for WPVIP.com compatibility as of November, 2022.
+There is a [beta release](https://github.com/Automattic/wpcom-thumbnail-editor/releases/tag/1.0.2-wpvip-beta) validated for WPVIP.com compatibility as of November, 2022. Thanks to Ben May @ The Code Company for the contribution to this release.
